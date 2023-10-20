@@ -198,7 +198,7 @@ class MujocoController(object):
         diff = abs(prediction - pos)
         error = np.sqrt(diff.dot(diff))
         joint_angles = joint_angles[1:-1]
-        #logger.debug(f'x={prediction[0]:+.3f} y={prediction[1]:+.3f} z={prediction[2]:+.3f}')
+        logger.debug(f'x={prediction[0]:+.3f} y={prediction[1]:+.3f} z={prediction[2]:+.3f}')
         if error > 0.02:print('failed ik')
         return joint_angles
     
@@ -264,8 +264,22 @@ def test_orientation(controller):
 
 if __name__ == '__main__':
     controller = MujocoController()
+    controller.open_gripper()
+    #controller.xpos_print()
+    #test_orientation(controller)
+    xyz = np.array([0, -0.6, 1.4])
+    controller.move_ee_to_xyz(xyz)
+    controller.stay(1000)
+    xyz = np.array([0, -0.6, 1.2])
+    controller.move_ee_to_xyz(xyz)
+    controller.current_target_joint_values[5] = 0
+    controller.controller_list[5].setpoint = 0
+    controller.stay(1000)
     controller.close_gripper()
-    test_all_joints(controller)
-    test_orientation(controller)
+    controller.stay(1000)
+
+    xyz = np.array([0, -0.6, 1.4])
+    controller.move_ee_to_xyz(xyz)
     while True:
+        #test_all_joints(controller)
         controller.stay(1000)

@@ -230,21 +230,22 @@ Control Engineering / Automation Engineering
                 <inertial pos="0 0 0.03" mass="0.5" diaginertia="0 0 0" />
         </body> -->
 
-    <body name="ball_1" pos=".0 -.6 1.1">
+    <!-- <body name="ball_1" pos=".0 -.6 1.1">
         <joint armature="0" axis="1 0 0" damping="0" limited="true" name="ball_1_x" pos="0 0 0" range="-5. 5." stiffness="0" type="slide"/>
         <joint armature="0" axis="0 1 0" damping="0" limited="true" name="ball_1_y" pos="0 0 0" range="-5. 5." stiffness="0" type="slide"/>
         <joint armature="0" axis="0 0 1" damping="0" limited="true" name="ball_1_z" pos="0 0 0" range="-2. 2." stiffness="0" type="slide"/>
         <joint armature="0" damping="0.001" name="ball_1_rot" pos="0 0 0" stiffness="0" type="ball"/>
-        <geom name="ball_1" pos="0 0 0" rgba="0.9 0.2 0.2 1" size=".03 .03 1.0" type="cylinder" />
-    </body>
+        <geom name="ball_1" pos="0 0 0" rgba="0.9 0.2 0.2 1" size=".03 .1 1.0" type="cylinder" />
+    </body> -->
 
-        <!-- <body name="box_1" pos=".0 -.6 0.95">
+        <body name="box_1" pos=".0 -.6 1.1">
             <joint armature="0" axis="1 0 0" damping="0" limited="true" name="box_1_x" pos="0 0 0" range="-5. 5." stiffness="0" type="slide"/>
             <joint armature="0" axis="0 1 0" damping="0" limited="true" name="box_1_y" pos="0 0 0" range="-5. 5." stiffness="0" type="slide"/>
             <joint armature="0" axis="0 0 1" damping="0" limited="true" name="box_1_z" pos="0 0 0" range="-2. 2." stiffness="0" type="slide"/>
             <joint armature="0" damping="0" name="box_1_rot" pos="0 0 0" stiffness="0" type="ball"/>
-            <geom name="box_1" pos="0 0 0" material="tablecube" size="0.02 0.02 0.02" type="box"/>
+            <geom name="box_1" pos="0 0 0" material="tablecube" size="0.02 0.02 0.08" type="box"/>
         </body>
+        <!--
 
         <body name="box_2" pos=".0 -.6 1.1">
             <joint armature="0" axis="1 0 0" damping="0" limited="true" name="box_2_x" pos="0 0 0" range="-5. 5." stiffness="0" type="slide" />
