@@ -99,7 +99,7 @@ class MujocoController(object):
                 sample_time=sample_time,
             ),
             PID( # 6 = Gripper Joint
-                2.5 * p_scale,
+                0.1 * p_scale,
                 i_gripper,
                 0.00 * d_scale,
                 setpoint=0.0,
@@ -121,6 +121,9 @@ class MujocoController(object):
 
         if target is not None:
           for i, id in enumerate(ids):
+            # if id == 5 : 
+            #     self.current_target_joint_values[id] = 0
+            #     continue
             self.current_target_joint_values[id] = target[i]
 
         for j in range(self.joint_nb):
@@ -192,14 +195,26 @@ class MujocoController(object):
             )
         
         # Verifying accuracy of ik 
+        joint_angles[6] = 0
+        trans_mat = self.ee_chain.forward_kinematics(joint_angles)
+        rot_mat = trans_mat[:3, :3]
+        quat = Rotation.from_matrix(rot_mat).as_quat()
+
         prediction = (
-            self.ee_chain.forward_kinematics(joint_angles)[:3, 3] + correct# self.sim.data.body_xpos[self.model.body_name2id("base_link")] - [0, -0.005, 0.16]
+            trans_mat[:3, 3] + correct# self.sim.data.body_xpos[self.model.body_name2id("base_link")] - [0, -0.005, 0.16]
         )
         diff = abs(prediction - pos)
         error = np.sqrt(diff.dot(diff))
+        joint_angles[6] = (np.arctan2(rot_mat[1,1], rot_mat[0,1])+ np.pi)%(2*np.pi)-np.pi#rot[3]
+        print(self.ee_chain.forward_kinematics(joint_angles))
         joint_angles = joint_angles[1:-1]
+        # x = qx / sqrt(1-qw*qw)x = qx / sqrt(1-qw*qw)
+        #change = 
+
         logger.debug(f'x={prediction[0]:+.3f} y={prediction[1]:+.3f} z={prediction[2]:+.3f}')
-        if error > 0.02:print('failed ik')
+        if error > 0.02:
+            print('failed ik')
+            return None
         return joint_angles
     
 
@@ -270,16 +285,30 @@ if __name__ == '__main__':
     xyz = np.array([0, -0.6, 1.4])
     controller.move_ee_to_xyz(xyz)
     controller.stay(1000)
-    xyz = np.array([0, -0.6, 1.2])
+    xyz = np.array([0, -0.6, 1.23])
     controller.move_ee_to_xyz(xyz)
-    controller.current_target_joint_values[5] = 0
-    controller.controller_list[5].setpoint = 0
-    controller.stay(1000)
     controller.close_gripper()
     controller.stay(1000)
 
-    xyz = np.array([0, -0.6, 1.4])
+    xyz = np.array([0., -0.6, 1.4])
     controller.move_ee_to_xyz(xyz)
+    # xyz = np.array([0.2, -0.6, 1.3])
+    # controller.move_ee_to_xyz(xyz)
+    # controller.stay(1000)
+    # xyz = np.array([-0.2, -0.7, 1.3])
+    # controller.move_ee_to_xyz(xyz)
+
+    # xyz = np.array([0, -0.6, 1.4])
+    # controller.move_ee_to_xyz(xyz)
+    target = controller.current_target_joint_values[5]
     while True:
-        #test_all_joints(controller)
+        controller.move_ee_to_xyz(xyz)
+
+        # controller.current_target_joint_values[5] = target + 0.3
+        # controller.controller_list[5].setpoint =  target + 0.3
+        # controller.stay(1000)
+        # controller.controller_list[5].setpoint = target
+        # controller.current_target_joint_values[5] = target
         controller.stay(1000)
+        # test_all_joints(controller)
+        # controller.stay(1000)
