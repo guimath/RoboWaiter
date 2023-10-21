@@ -69,6 +69,10 @@ Control Engineering / Automation Engineering
         <mesh name="inner_finger_coarse" file="inner_finger_coarse.STL" />
         <mesh name="outer_knuckle_coarse" file="outer_knuckle_coarse.STL" />
         <mesh name="outer_finger_coarse" file="outer_finger_coarse.STL" />
+        <!-- <mesh name="bottle" file="bottle.obj" /> -->
+
+        <mesh file="wine_bottle.stl" name="bottle" scale="0.001 0.001 0.001"/>
+
 
         <!--Textures-->
         <texture name="ur5_tex"     type="2d"       builtin="flat" height="32" width="32" rgb1="0.45 0.45 0.45" />
@@ -123,7 +127,7 @@ Control Engineering / Automation Engineering
         </body> -->
 
         <body name="pick_box" pos="0 -0.6 0.0" euler="0 0 1.57">
-            <geom size=".2 .28 .03" pos ="0 0 0.88" type="box" material="bench_mat"/>
+            <geom size=".2 .28 .030" pos ="0 0 0.88" type="box" material="bench_mat"/>
             <!-- <geom size=".2 .28 .03" pos ="0 0 0.86" type="box" material="bench_mat" friction="2 0.005 0.0001"/> -->
             <geom size=".03 .27 .44" pos ="0.23 0.0 0.44" type="box" material="bench_mat"/>
             <geom size=".03 .27 .44" pos ="-0.23 0.0 0.44" type="box" material="bench_mat"/>
@@ -230,12 +234,20 @@ Control Engineering / Automation Engineering
                 <inertial pos="0 0 0.03" mass="0.5" diaginertia="0 0 0" />
         </body> -->
 
-    <body name="ball_1" pos=".0 -.6 1.1">
+    <!-- <body name="ball_1" pos=".05 -.5 1.1">
         <joint armature="0" axis="1 0 0" damping="0" limited="true" name="ball_1_x" pos="0 0 0" range="-5. 5." stiffness="0" type="slide"/>
         <joint armature="0" axis="0 1 0" damping="0" limited="true" name="ball_1_y" pos="0 0 0" range="-5. 5." stiffness="0" type="slide"/>
         <joint armature="0" axis="0 0 1" damping="0" limited="true" name="ball_1_z" pos="0 0 0" range="-2. 2." stiffness="0" type="slide"/>
         <joint armature="0" damping="0.001" name="ball_1_rot" pos="0 0 0" stiffness="0" type="ball"/>
         <geom name="ball_1" pos="0 0 0" rgba="0.9 0.2 0.2 1" size=".03 .1 1.0" type="cylinder" />
+    </body> -->
+    <body name="bottle" pos=".05 -.5 1.1">
+        <joint armature="0" axis="1 0 0" damping="0" limited="true" name="ball_1_x" pos="0 0 0" range="-5. 5." stiffness="0" type="slide"/>
+        <joint armature="0" axis="0 1 0" damping="0" limited="true" name="ball_1_y" pos="0 0 0" range="-5. 5." stiffness="0" type="slide"/>
+        <joint armature="0" axis="0 0 1" damping="0" limited="true" name="ball_1_z" pos="0 0 0" range="-2. 2." stiffness="0" type="slide"/>
+        <joint armature="0" damping="0.001" name="ball_1_rot" pos="0 0 0" stiffness="0" type="ball"/>
+        <inertial pos="0 0 0" quat="0.5 0.5 -0.5 0.5" mass="4" diaginertia="0.0072 0.00443333 0.00443333" />
+        <geom type="mesh"  mesh="bottle" material="ur5_mat"/>
     </body>
 
         <!--
