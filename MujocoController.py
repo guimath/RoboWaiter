@@ -113,7 +113,7 @@ class MujocoController(object):
         group="all",
         target=None,
         tolerance=0.05,
-        max_steps=10000):
+        max_steps=1000):
         ''' Updates joints targets and checks targets are reached'''
         ids = self.groups[group]
         steps = 1
@@ -137,7 +137,8 @@ class MujocoController(object):
             self.viewer.render()
 
             deltas = [self.current_target_joint_values[j] - self.sim.data.qpos[j] for j in range(self.joint_nb)]
-            #if (steps%100) == 0 : logger.debug(f'{steps} deltas={[f"{delta:.3f}" for delta in deltas]}')
+            deltas = [deltas[id] for id in ids] # only checking moving group
+            if (steps%100) == 0 : logger.debug(f'{steps} deltas={[f"{delta:.3f}" for delta in deltas]}')
             if np.max(np.abs(deltas))<tolerance:
                 break
             steps += 1
@@ -159,6 +160,7 @@ class MujocoController(object):
     def move_ee_to_xyz(self, pos, orientation=[0, 0, -1], axis='X'):
         ''' Moves end effector to wanted pose'''
         joint_angles = self.ik(pos, orientation, axis)
+
         if joint_angles is None: return None
         return self.move_group_to_joint_target(group="arm", target=joint_angles)
 
@@ -168,8 +170,6 @@ class MujocoController(object):
         # Orientation note : 
         # - axis is the axis we want to align
         # - orientation is the vec we want to align it to
-        from scipy.spatial.transform import Rotation   
-        rot = Rotation.from_rotvec(orientation).as_matrix()
 
         # inverse kinematics solver chain starts at the base link so needs to offset by it
         # also specifies position of the ee joint, might want to add an offset so that the 
@@ -197,26 +197,73 @@ class MujocoController(object):
         # Verifying accuracy of ik 
         joint_angles[6] = 0
         trans_mat = self.ee_chain.forward_kinematics(joint_angles)
-        rot_mat = trans_mat[:3, :3]
-        quat = Rotation.from_matrix(rot_mat).as_quat()
 
         prediction = (
             trans_mat[:3, 3] + correct# self.sim.data.body_xpos[self.model.body_name2id("base_link")] - [0, -0.005, 0.16]
         )
         diff = abs(prediction - pos)
         error = np.sqrt(diff.dot(diff))
-        joint_angles[6] = (np.arctan2(rot_mat[1,1], rot_mat[0,1])+ np.pi)%(2*np.pi)-np.pi#rot[3]
+        if orientation== [0,0,-1]:
+            joint_angles[6] = (np.arctan2(trans_mat[1,1], trans_mat[0,1])+ np.pi)%(2*np.pi)-np.pi#rot[3]
+        else : 
+            joint_angles[6] = (np.arctan2(trans_mat[0,1], trans_mat[1,1])+ np.pi)%(2*np.pi)-np.pi#rot[3]
+
         print(self.ee_chain.forward_kinematics(joint_angles))
         joint_angles = joint_angles[1:-1]
         # x = qx / sqrt(1-qw*qw)x = qx / sqrt(1-qw*qw)
         #change = 
 
-        logger.debug(f'x={prediction[0]:+.3f} y={prediction[1]:+.3f} z={prediction[2]:+.3f}')
         if error > 0.02:
-            print('failed ik')
-            return None
+            logger.debug(f'x={prediction[0]:+.3f} y={prediction[1]:+.3f} z={prediction[2]:+.3f}')
         return joint_angles
     
+    def ik_hor2(self, pos, orientation=[0, 0, -1], axis='X', from_prev = True):
+        '''inverse kinematics to get get joint value for a given pose'''
+        # inverse kinematics solver chain starts at the base link so needs to offset by it
+        # also specifies position of the ee joint, might want to add an offset so that the 
+        # target position is the grasp center.
+        correct = self.sim.data.body_xpos[self.model.body_name2id("base_link")] #- (rot@[0, -0.005, 0.16])
+        gripper_center_position = pos - correct
+        if from_prev :
+            try :
+                # trying to solve from actual position
+                initial_position= [0] + [self.sim.data.qpos[i] for i in range(self.joint_nb)] 
+                joint_angles = self.ee_chain.inverse_kinematics(
+                    target_position=gripper_center_position,
+                    target_orientation=orientation,
+                    orientation_mode=axis,
+                    initial_position=initial_position
+                )
+            except :
+                return self.ik_hor(self, pos, orientation, axis, from_prev)
+        else : 
+            joint_angles = self.ee_chain.inverse_kinematics(
+                target_position=gripper_center_position,
+                target_orientation=orientation,
+                orientation_mode=axis,
+                initial_position=[-1.0] + [-1.0] * 7
+            )
+        # Verifying accuracy of ik 
+        joint_angles[6] = 0
+        trans_mat = self.ee_chain.forward_kinematics(joint_angles)
+
+        prediction = (
+            trans_mat[:3, 3] + correct# self.sim.data.body_xpos[self.model.body_name2id("base_link")] - [0, -0.005, 0.16]
+        )
+        diff = abs(prediction - pos)
+        error = np.sqrt(diff.dot(diff))
+        joint_angles[6] = (np.arctan2(trans_mat[1,1], trans_mat[0,1])+ np.pi)%(2*np.pi)-np.pi#rot[3]
+        #print(self.ee_chain.forward_kinematics(joint_angles))
+        joint_angles = joint_angles[1:-1]
+        # x = qx / sqrt(1-qw*qw)x = qx / sqrt(1-qw*qw)
+        #change = 
+
+        if error > 0.2:
+            if from_prev:
+                other = self.ik_hor(self, pos, orientation, axis, from_prev)
+
+            logger.debug(f'x={prediction[0]:+.3f} y={prediction[1]:+.3f} z={prediction[2]:+.3f}')
+        return joint_angles
 
     def stay(self, duration):
         ''' Waiting equivalent'''
@@ -240,6 +287,13 @@ class MujocoController(object):
     
     def get_xpos_name(self, name:str):
         return self.sim.data.body_xpos[self.model.body_name2id(name)]
+
+    def pour_all(self): 
+        target = self.current_target_joint_values.copy()
+        target[0] = (target[0]+np.pi/2 + np.pi)%(2*np.pi)- np.pi
+        self.move_group_to_joint_target('arm', target)
+        target[5] = (target[5]-np.pi/2 + np.pi)%(2*np.pi)- np.pi
+        self.move_group_to_joint_target('arm', target)
 
 def test_all_joints(controller):
     target = controller.current_target_joint_values.copy()
@@ -277,38 +331,25 @@ def test_orientation(controller):
     logger.debug(diff)
     logger.info('test_orientation completed')
 
+def grab_bottle(controller:MujocoController):
+    controller.open_gripper()
+    HOR_ORIENT = [-1.0, 0.0, 0.0]
+    xyz = np.array([0.2, -0.5, 1.2])
+    controller.move_ee_to_xyz(xyz, HOR_ORIENT) # just above
+    controller.stay(1000)
+    xyz = np.array([0.2, -0.5, 1])
+    controller.move_ee_to_xyz(xyz, HOR_ORIENT) # next to bottle
+    controller.stay(1000)
+    controller.close_gripper() # grabbing
+    controller.stay(1000)
+    xyz = np.array([0.2, -0.5, 1.2])
+    controller.move_ee_to_xyz(xyz, HOR_ORIENT) # lifting
+    controller.stay(1000)
+    controller.pour_all()
+    
+
 if __name__ == '__main__':
     controller = MujocoController()
-    controller.open_gripper()
-    #controller.xpos_print()
-    #test_orientation(controller)
-    xyz = np.array([0, -0.6, 1.4])
-    controller.move_ee_to_xyz(xyz)
-    controller.stay(1000)
-    xyz = np.array([0, -0.6, 1.23])
-    controller.move_ee_to_xyz(xyz)
-    controller.close_gripper()
-    controller.stay(1000)
-
-    xyz = np.array([0., -0.6, 1.4])
-    controller.move_ee_to_xyz(xyz)
-    # xyz = np.array([0.2, -0.6, 1.3])
-    # controller.move_ee_to_xyz(xyz)
-    # controller.stay(1000)
-    # xyz = np.array([-0.2, -0.7, 1.3])
-    # controller.move_ee_to_xyz(xyz)
-
-    # xyz = np.array([0, -0.6, 1.4])
-    # controller.move_ee_to_xyz(xyz)
-    target = controller.current_target_joint_values[5]
+    grab_bottle(controller)
     while True:
-        controller.move_ee_to_xyz(xyz)
-
-        # controller.current_target_joint_values[5] = target + 0.3
-        # controller.controller_list[5].setpoint =  target + 0.3
-        # controller.stay(1000)
-        # controller.controller_list[5].setpoint = target
-        # controller.current_target_joint_values[5] = target
         controller.stay(1000)
-        # test_all_joints(controller)
-        # controller.stay(1000)
