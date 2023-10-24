@@ -138,7 +138,7 @@ class MujocoController(object):
 
             deltas = [self.current_target_joint_values[j] - self.sim.data.qpos[j] for j in range(self.joint_nb)]
             deltas = [deltas[id] for id in ids] # only checking moving group
-            if (steps%100) == 0 : logger.debug(f'{steps} deltas={[f"{delta:.3f}" for delta in deltas]}')
+            #if (steps%100) == 0 : logger.debug(f'{steps} deltas={[f"{delta:.3f}" for delta in deltas]}')
             if np.max(np.abs(deltas))<tolerance:
                 break
             steps += 1
@@ -208,60 +208,12 @@ class MujocoController(object):
         else : 
             joint_angles[6] = (np.arctan2(trans_mat[0,1], trans_mat[1,1])+ np.pi)%(2*np.pi)-np.pi#rot[3]
 
-        print(self.ee_chain.forward_kinematics(joint_angles))
-        joint_angles = joint_angles[1:-1]
-        # x = qx / sqrt(1-qw*qw)x = qx / sqrt(1-qw*qw)
-        #change = 
-
-        if error > 0.02:
-            logger.debug(f'x={prediction[0]:+.3f} y={prediction[1]:+.3f} z={prediction[2]:+.3f}')
-        return joint_angles
-    
-    def ik_hor2(self, pos, orientation=[0, 0, -1], axis='X', from_prev = True):
-        '''inverse kinematics to get get joint value for a given pose'''
-        # inverse kinematics solver chain starts at the base link so needs to offset by it
-        # also specifies position of the ee joint, might want to add an offset so that the 
-        # target position is the grasp center.
-        correct = self.sim.data.body_xpos[self.model.body_name2id("base_link")] #- (rot@[0, -0.005, 0.16])
-        gripper_center_position = pos - correct
-        if from_prev :
-            try :
-                # trying to solve from actual position
-                initial_position= [0] + [self.sim.data.qpos[i] for i in range(self.joint_nb)] 
-                joint_angles = self.ee_chain.inverse_kinematics(
-                    target_position=gripper_center_position,
-                    target_orientation=orientation,
-                    orientation_mode=axis,
-                    initial_position=initial_position
-                )
-            except :
-                return self.ik_hor(self, pos, orientation, axis, from_prev)
-        else : 
-            joint_angles = self.ee_chain.inverse_kinematics(
-                target_position=gripper_center_position,
-                target_orientation=orientation,
-                orientation_mode=axis,
-                initial_position=[-1.0] + [-1.0] * 7
-            )
-        # Verifying accuracy of ik 
-        joint_angles[6] = 0
-        trans_mat = self.ee_chain.forward_kinematics(joint_angles)
-
-        prediction = (
-            trans_mat[:3, 3] + correct# self.sim.data.body_xpos[self.model.body_name2id("base_link")] - [0, -0.005, 0.16]
-        )
-        diff = abs(prediction - pos)
-        error = np.sqrt(diff.dot(diff))
-        joint_angles[6] = (np.arctan2(trans_mat[1,1], trans_mat[0,1])+ np.pi)%(2*np.pi)-np.pi#rot[3]
         #print(self.ee_chain.forward_kinematics(joint_angles))
         joint_angles = joint_angles[1:-1]
         # x = qx / sqrt(1-qw*qw)x = qx / sqrt(1-qw*qw)
         #change = 
 
-        if error > 0.2:
-            if from_prev:
-                other = self.ik_hor(self, pos, orientation, axis, from_prev)
-
+        if error > 0.02:
             logger.debug(f'x={prediction[0]:+.3f} y={prediction[1]:+.3f} z={prediction[2]:+.3f}')
         return joint_angles
 
@@ -294,6 +246,28 @@ class MujocoController(object):
         self.move_group_to_joint_target('arm', target)
         target[5] = (target[5]-np.pi/2 + np.pi)%(2*np.pi)- np.pi
         self.move_group_to_joint_target('arm', target)
+
+
+    def prep_twist(self):
+        target = self.current_target_joint_values.copy()
+        target[5] = - np.pi
+        self.move_group_to_joint_target('arm', target)
+
+    def untwist(self):
+        target = self.current_target_joint_values.copy()
+        target[5] = -np.pi
+        self.move_group_to_joint_target('arm', target, max_steps=2000)
+        self.close_gripper()
+        for i in range(5):
+            target[5] = np.pi
+            self.move_group_to_joint_target('arm', target, max_steps=2000)
+            self.open_gripper(half=True)
+            target[5] = -np.pi
+            self.move_group_to_joint_target('arm', target, max_steps=2000)
+            self.close_gripper()
+        target[0] = (target[0]+np.pi/2 + np.pi)%(2*np.pi)- np.pi
+        self.move_group_to_joint_target('arm', target)
+        self.open_gripper(half=True)
 
 def test_all_joints(controller):
     target = controller.current_target_joint_values.copy()
@@ -337,19 +311,30 @@ def grab_bottle(controller:MujocoController):
     xyz = np.array([0.2, -0.5, 1.2])
     controller.move_ee_to_xyz(xyz, HOR_ORIENT) # just above
     controller.stay(1000)
-    xyz = np.array([0.2, -0.5, 1])
+    xyz[2] = 1.0
     controller.move_ee_to_xyz(xyz, HOR_ORIENT) # next to bottle
     controller.stay(1000)
     controller.close_gripper() # grabbing
     controller.stay(1000)
-    xyz = np.array([0.2, -0.5, 1.2])
+    xyz[2] = 1.2
     controller.move_ee_to_xyz(xyz, HOR_ORIENT) # lifting
     controller.stay(1000)
     controller.pour_all()
     
+def twist_cap(controller:MujocoController):
+    controller.open_gripper()
+    VER_ORIENT = [0, 0.0, -1]
+    xyz = np.array([0.05, -0.5, 1.4])
+    controller.move_ee_to_xyz(xyz, VER_ORIENT) # just above
+    controller.stay(1000)
+    xyz[2] = 1.35
+    controller.move_ee_to_xyz(xyz, VER_ORIENT) # next to bottle
+    controller.stay(1000)
+    controller.untwist()
 
 if __name__ == '__main__':
     controller = MujocoController()
-    grab_bottle(controller)
+    twist_cap(controller)
     while True:
         controller.stay(1000)
+
