@@ -24,7 +24,7 @@
     </visual>
   </link>
 
-  <joint name="cap_joint" type="fixed">
+  <joint name="cap_joint" type="revolute">
     <parent link="bottle"/>
     <child link="cap"/>
     <origin xyz="0 .6 0" rpy="0 0 0"/>
