@@ -4,6 +4,7 @@ import numpy as np
 import ikpy.chain
 from simple_pid import PID
 import time
+import imageio
 
 import os
 import logging
@@ -21,14 +22,14 @@ class MujocoController(object):
     to perform tasks on an already instantiated simulation.
     """
 
-    def __init__(self, path_xml=XML_FILE, path_urdf=URDF_FILE, model=None, simulation=None, viewer=None):
+    def __init__(self, path_xml=XML_FILE, path_urdf=URDF_FILE, model=None, simulation=None, viewer=None, cap_video= False):
         if model is None:
             self.model = mp.load_model_from_path(path_xml)
         else:
             self.model = model
         self.sim = mp.MjSim(self.model) if simulation is None else simulation
         self.viewer = mp.MjViewer(self.sim) if viewer is None else viewer
-
+    
         self.ee_chain = ikpy.chain.Chain.from_urdf_file(path_urdf, active_links_mask=[False]+ [True]*6+[False])
         self.create_lists()
         self.groups = {
@@ -40,6 +41,11 @@ class MujocoController(object):
         self.current_target_joint_values = [
             self.controller_list[i].setpoint for i in range(self.joint_nb)
         ]
+
+        self.frame_nb =1
+        self.cap_video = cap_video
+        if cap_video:
+            self.frames = [self.viewer._read_pixels_as_in_window()]
         
     def create_lists(self):
         ''' Creates PID controller list (one per joint)'''
@@ -135,6 +141,11 @@ class MujocoController(object):
 
             self.sim.step()
             self.viewer.render()
+            if self.cap_video :
+                self.frame_nb +=1
+                if self.frame_nb % 2 ==0:
+                    self.frames.append(self.viewer._read_pixels_as_in_window())
+                    print(self.frame_nb)
 
             deltas = [self.current_target_joint_values[j] - self.sim.data.qpos[j] for j in range(self.joint_nb)]
             deltas = [deltas[id] for id in ids] # only checking moving group
@@ -228,14 +239,14 @@ class MujocoController(object):
             elapsed = (time.time() - starting_time) * 1000
 
     def xpos_print(self):
-        for i in range(controller.model.nbody):
-            print(f'{controller.model.body_id2name(i):30s} {controller.sim.data.body_xpos[i]}')
+        for i in range(self.model.nbody):
+            print(f'{self.model.body_id2name(i):30s} {self.sim.data.body_xpos[i]}')
     def diff_xpos_print(self):
         try : 
-            for i in range(controller.model.nbody):
-                print(f'{controller.model.body_id2name(i):30s} {self.prev_xpos[i]-controller.sim.data.body_xpos[i]}')
+            for i in range(self.model.nbody):
+                print(f'{self.model.body_id2name(i):30s} {self.prev_xpos[i]-self.sim.data.body_xpos[i]}')
         except : pass
-        self.prev_xpos = controller.sim.data.body_xpos.copy()
+        self.prev_xpos = self.sim.data.body_xpos.copy()
     
     def get_xpos_name(self, name:str):
         return self.sim.data.body_xpos[self.model.body_name2id(name)]
@@ -268,6 +279,20 @@ class MujocoController(object):
         target[0] = (target[0]+np.pi/2 + np.pi)%(2*np.pi)- np.pi
         self.move_group_to_joint_target('arm', target)
         self.open_gripper(half=True)
+
+    def save_vid(self, file_name = 'vid.mp4'):
+        if not self.cap_video : return
+        self.cap_video = False
+        baseline = self.frames[0][0][0]
+        writer = imageio.get_writer(file_name, fps=30)
+        for f in self.frames :
+            if f[0][0][0] != baseline[0] or f[0][0][1] != baseline[1] or f[0][0][2] != baseline[2] : continue
+            writer.append_data(f)
+        writer.close()
+
+    def block_while_serving(self):
+        while True:
+            self.stay(1000)
 
 def test_all_joints(controller):
     target = controller.current_target_joint_values.copy()
@@ -311,9 +336,11 @@ def grab_bottle(controller:MujocoController):
     xyz = np.array([0.2, -0.5, 1.2])
     controller.move_ee_to_xyz(xyz, HOR_ORIENT) # just above
     controller.stay(1000)
+    print(controller.current_target_joint_values)
     xyz[2] = 1.0
     controller.move_ee_to_xyz(xyz, HOR_ORIENT) # next to bottle
     controller.stay(1000)
+    print(controller.current_target_joint_values)
     controller.close_gripper() # grabbing
     controller.stay(1000)
     xyz[2] = 1.2
@@ -332,9 +359,13 @@ def twist_cap(controller:MujocoController):
     controller.stay(1000)
     controller.untwist()
 
-if __name__ == '__main__':
-    controller = MujocoController()
-    twist_cap(controller)
-    while True:
-        controller.stay(1000)
 
+
+def main():
+    controller = MujocoController(cap_video=False)
+    grab_bottle(controller)
+    controller.xpos_print()
+    controller.block_while_serving()
+
+if __name__ == '__main__':
+    main()
