@@ -9,11 +9,9 @@
         </inertial>
         <visual>
             <origin xyz="0 0 0" rpy="0 0 0" />
-            <!-- <geometry>
-                <box size="0.05 0.2 0.05" />
-            </geometry> -->
             <geometry>
-                <mesh filename="meshes/ur5/visual/wine_bottle.stl" scale="0.001 0.001 0.001"/>
+                <box size="0.05 0.05 0.2" /><!-- simplification of the shape-->
+                <!-- <mesh filename="meshes/ur5/visual/wine_bottle.stl" scale="0.001 0.001 0.001"/> -->
             </geometry>     
 
             <material name="LightGrey">
@@ -21,17 +19,15 @@
             </material>   
         </visual>
         <collision group="default">
-            <origin xyz="0 0 0" rpy="0 0 0" />
-            <!-- <geometry>
-                <box size="0.05 0.2 0.05" />
-            </geometry> -->
+            <!-- <origin xyz="0 0 0.1" rpy="0 0 0" /> -->
             <geometry>
-                <mesh filename="meshes/ur5/visual/wine_bottle.stl" scale="0.001 0.001 0.001"/>
-            </geometry>          
+                <box size="0.05 0.05 0.2" /><!-- simplification of the shape-->
+                <!-- <mesh filename="meshes/ur5/visual/wine_bottle.stl" scale="0.001 0.001 0.001"/> -->
+            </geometry>
         </collision>
     </link>
     <joint name="bot" type="floating">
-        <origin xyz="0.4 0.3 0.4" rpy="1.5 0 0" />
+        <origin xyz="-0.5 0.2 0.05" rpy="-1.57075 0 0" />
         <parent link="world" />
         <child link="bottle_free" />
     </joint>
