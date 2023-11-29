@@ -267,18 +267,19 @@
     <origin xyz="0.0127 0 0.0693075" rpy="0 0 0"/>
     <axis xyz="0 1 0"/>
     <limit lower="-1" upper="1" effort="20" velocity="3.2"/>
+    <dynamics damping="0.01" friction="0.004"/>
     <!-- <mimic joint="base_to_rik" multiplier="-1" offset="0"/> -->
   </joint>
 
 
   <link name="left_inner_knuckle">
-    <contact>
+    <!-- <contact>
       <friction_anchor/>
       <stiffness value="30000.0"/>
       <damping value="1000.0"/>
       <spinning_friction value="0.1"/>
       <lateral_friction value="1.0"/>
-    </contact>
+    </contact> -->
     <visual>
       <geometry>
         <mesh filename="meshes/ur5/visual/inner_knuckle_coarse.stl"/>
@@ -305,16 +306,21 @@
     <origin xyz="-0.0127 0 0.0693075" rpy="0.0 0.0 3.14159265"/>
     <axis xyz="0 1 0"/>
     <limit lower="-1" upper="1" effort="20" velocity="3.2"/>
+    <dynamics damping="0.01" friction="0.004"/>
   </joint>
+  
+  <!-- <equality>
+    <joint name="fingers" joint1="base_to_rik" joint2="base_to_lik" polycoef="0 1 0 0 0"/>
+  </equality> -->
 
   <link name="right_inner_knuckle">
-    <contact>
+    <!-- <contact>
       <friction_anchor/>
       <stiffness value="30000.0"/>
       <damping value="1000.0"/>
       <spinning_friction value="0.1"/>
       <lateral_friction value="1.0"/>
-    </contact>
+    </contact> -->
     <visual>
       <geometry>
         <mesh filename="meshes/ur5/visual/inner_knuckle_coarse.stl"/>
@@ -333,7 +339,7 @@
       <geometry>
         <mesh filename="meshes/ur5/visual/inner_knuckle_coarse.stl"/>
       </geometry>
-    </collision>>
+    </collision>
   </link>
 
   <joint name="lik_to_lif" type="fixed">
@@ -360,7 +366,7 @@
       <geometry>
         <mesh filename="meshes/ur5/visual/inner_finger_coarse.stl"/>
       </geometry>
-    </collision>>
+    </collision>
   </link>
 
 
@@ -389,7 +395,7 @@
       <geometry>
         <mesh filename="meshes/ur5/visual/inner_finger_coarse.stl"/>
       </geometry>
-    </collision>>
+    </collision>
   </link>
 
   <!-- 
