@@ -5,41 +5,74 @@ import numpy as np
 import time
 
 ABS_PATH = os.path.dirname(os.path.abspath(__file__)) + os.sep
+ASSET_PATH = ABS_PATH + 'nimble' + os.sep
 
-UR5_URDF    = ABS_PATH + 'nimble' + os.sep + 'ur5_gripper_reduced.urdf'
-GROUND_URDF = ABS_PATH + 'nimble' + os.sep + 'ground.urdf'
-BOTTLE_URDF = ABS_PATH + 'nimble' + os.sep + 'bottle.urdf'
+UR5_URDF    = ASSET_PATH + 'ur5_gripper_no_col.urdf'
+UR5_URDF    = ASSET_PATH + 'ur5_gripper_no_col copy.urdf'
+GROUND_URDF = ASSET_PATH + 'ground_obj.urdf'
+BOTTLE_URDF = ASSET_PATH + 'bottle.urdf'
+BOTTLE1 = ASSET_PATH + 'new_bottle/bottle_and_cap.urdf'
+BOX1 = ASSET_PATH + 'box1.urdf'
 TIMESTEP = 0.01
-SERVE_PORT = 8060
+SERVE_PORT = 8000
 EPOCH_MAX = 600
 LOSS_MIN = 1e-2
 class NimbleController():
+    states : []
+    '''All the states to be displayed'''
+    action : []
+    '''Current torques applied to each joint'''
+
     def __init__(self, arm_urdf =UR5_URDF, env_urdf= [GROUND_URDF, BOTTLE_URDF]):
 
         self.world = nimble.simulation.World()
         self.world.setGravity([0, 0, 0]) # TODO change to real value 
         self.world.setTimeStep(TIMESTEP)
-
-        arm = self.world.loadSkeleton(arm_urdf)
-        arm.setSelfCollisionCheck(True) 
-        dofs = self.world.getNumDofs()
+        self.arm = self.world.loadSkeleton(arm_urdf)
+        # self.arm.setSelfCollisionCheck(True) 
+        # lik = arm.getJoint(9)
+        # rik = arm.getJoint(11)
+        # print(lik.getName())
+        # print(rik.getPositionUpperLimit(0))
+        # print(rik.getName())
+        # lik.setPositionUpperLimit(0,0.8) # only change idx zero because 1 DOF
+        # rik.setPositionUpperLimit(0,0.8)
+        # print(rik.getPositionUpperLimit(0))
+        self.dofs = self.world.getNumDofs()
         for env in env_urdf:
-            _ = self.world.loadSkeleton(env)
-        end_dofs = self.world.getNumDofs()
-
-        # removing dofs from objects not arm
-        for i in range(dofs,end_dofs):
-            self.world.removeDofFromActionSpace(i) 
+            if env != GROUND_URDF :
+                self.bottle_skel = self.world.loadSkeleton(env)
+                for i in range(self.bottle_skel.getNumBodyNodes()):
+                    node = self.bottle_skel.getBodyNode(i)
+                    node.setFrictionCoeff(1000.)
+                # print(test.getPositions())
+                self.bottle = env
+                # test.setPositions([0,0, 0, -0.5, 0.1, 0.035]) # 0.1, 0.035
+            else : _ = self.world.loadSkeleton(env)
+        self.remove_dof_from_actions()
+        
 
         print(f"Number of DOFs: {self.world.getNumDofs()}")
-
+        for i in [9, 11]:
+            _joint = self.arm.getJoint(i)
+            print(_joint.getName())
+            _joint.setPositionLimitEnforced(True)
+        
         self.gui = nimble.NimbleGUI(self.world)
         self.gui.serve(SERVE_PORT)
         self.gui.nativeAPI().renderWorld(self.world, "world")
 
         self.ikMap = nimble.neural.IKMapping(self.world)
-        self.ikMap.addSpatialBodyNode(arm.getBodyNode("robotiq_base_link"))
+        self.ikMap.addSpatialBodyNode(self.arm.getBodyNode("robotiq_base_link"))
         self.states = []
+        self.action = torch.tensor(self.world.getAction())
+
+
+    def remove_dof_from_actions(self):
+        end_dofs = self.world.getNumDofs()
+        # removing dofs from objects not arm
+        for i in range(self.dofs,end_dofs):
+            self.world.removeDofFromActionSpace(i) 
 
     def move_to_position(self, goal_pos, move_num_steps = 100, loss_threshold= LOSS_MIN):
         action_size = 8#self.world.getNumDofs()
@@ -107,108 +140,63 @@ class NimbleController():
         self.world.setState(tar)
         self.gui.nativeAPI().renderWorld(self.world, "world")
 
-    def close_gripper(self, torque=-3e-2, show=False):
-        action = self.world.getAction()
-        action[6:8]= torque
-        action = torch.tensor(action) # torch.zeros_like(
-        self.run_for(
-            nstep  = 40, 
-            action = action, 
-            reset  = False, 
-            show   = show
-        )
+    def show_states(self, show=False):
+        if show : 
+            print(f'showing {len(self.states)} frames')
+            self.gui.loopStates(self.states)
 
-    def open_gripper(self, show=False):
-        action = self.world.getAction()
-        action = torch.tensor(action) # torch.zeros_like(
-        action[6:8] = 2e-2
+    def close_gripper(self, torque=-1e-4, show=False):
+        # self.action[6] = torque/10
+        # self.run_for(20, reset=False)
+        self.action[6:8] = torque
+        prev = 0
+        i = 0
         old_state = self.world.getState()
-        print('opening gripper')
-        while old_state[6]<0.8 :
-            state = nimble.timestep(self.world, torch.tensor(old_state), action)
-            self.states.append(state.detach())
+        while np.abs(old_state[8+6]) > 2e-6 or old_state[6]>0.1: #  or np.abs(old_state[6]-old_state[7])>1e-4
+            prev = old_state[6]
+            self.time_step(torch.tensor(old_state))
             old_state= self.world.getState()
-            print(f'p0={old_state[6]: <23} p1={old_state[7]: <23}', end='\r')
+            print(f'{i: <3} p0={old_state[6]: <23} p1={old_state[7]: <23} delta={old_state[8+6]}', end='\n')
+            i+= 1
+            if i == 300 : break
+        # if np.abs(old_state[6]-prev) < 1e-6 and np.abs(old_state[6]-old_state[7])>1e-4 : 
+        #     self.close_gripper(torque=torque*2, show=False)
+        self.action[6] = torque
+        
+        self.show_states(show)
 
-        print(f'Done opening {"": <80}')
-        action[6:8]= 0
-        state = nimble.timestep(self.world, torch.tensor(old_state), action)
-        self.states.append(state.detach())
-        if show : self.gui.loopStates(self.states)
+    def open_gripper(self, torque=3e-4, show=False):
+        self.action[6:8] = torque
+        old_state = self.world.getState()
+        while old_state[6]<0.799 :
+            self.time_step(torch.tensor(old_state))
+            old_state= self.world.getState()
+            print(f'p0={old_state[6]: <23} p1={old_state[7]: <23}', end='\n')
+        self.states = self.states[-100:]
+        self.show_states(show)
+     
 
-    # def open_gripper_pid(self):
-    #     action = self.world.getAction()
-    #     action = torch.tensor(action) # torch.zeros_like(
-    #     TARGET = 0.9
-    #     k_pos = 5e-2
-    #     k_vel = 0e-1
-    #     print(f'opening gripper')
-    #     # old_state= self.world.getState()
-    #     # action[6] = 5e-4
-    #     # action[7] = 5e-4
-    #     # while old_state[6] < 0 :
-    #     #     state = nimble.timestep(self.world, torch.tensor(old_state), action)
-    #     #     self.states.append(state.detach())
-    #     #     old_state= self.world.getState()
-    #     #     print(f'{old_state[6]} {old_state[7]}')
-    #     # action[6] = 0
-    #     # action[7] = 5e-4
-    #     # while self.world.getState()[7] < 0 :
-    #     #     action[7] = 3e-5
-    #     #     state = nimble.timestep(self.world, torch.tensor(self.world.getState()), action)
-    #     #     self.states.append(state.detach())
-    #     #     print(self.world.getState()[7])
-    #     torque = [0,0]
-    #     while True :
-    #         old_state= self.world.getState()
-    #         pos = old_state[6:8]
-    #         vel = old_state[8+6:8+8]
-    #         for i in range(2):
-    #             torque[i] = np.min([1e20 ,(TARGET-pos[i])*k_pos + vel[i]*k_vel]) # max torque 
-
-    #         action[6]=torque[0]
-    #         action[7]=torque[1]
-    #         print(f't={torque[0]: <23} pos0={pos[0]: <20} pos1={pos[1]: <20}', end='\n')
-    #         if np.abs(TARGET-pos[0]) < 1e-4 and np.abs(TARGET-pos[1]) < 1e-4 and \
-    #             np.abs(vel[0]) < 6e-5  and np.abs(vel[1]) < 6e-5: break
-    #         # if pos1 > TARGET : break
-    #         state = nimble.timestep(self.world, torch.tensor(old_state), action)
-    #         self.states.append(state.detach())
-
-    #     action[6:8]= 0
-    #     init_state = torch.tensor(self.world.getState())
-    #     state = nimble.timestep(self.world, init_state, action)
-    #     self.states.append(state.detach())
-    #     print(f'opening done')
-    #     self.gui.loopStates(self.states)
-
-    def run_for(self, nstep, action=None, reset=True, show=False):
+    def run_for(self, nstep, reset=True, show=False):
         if reset : self.states = []
-        if action is None : action = torch.tensor(self.world.getAction())
         print(f'Running for {nstep} steps')
+        print(self.action)
         for i in range(nstep):
-            init_state = torch.tensor(self.world.getState())
-            state = nimble.timestep(self.world, init_state, action)
-            self.states.append(state.detach())
+            self.time_step()
             print(f'{i}', end= '\r')
         print(f'{nstep} steps done')
-        if show : self.gui.loopStates(self.states)
+        # self.states = self.states[-500:]
+        
+        self.show_states(show)
 
 def main():
-    controller = NimbleController()
-    state = [-1.2480710611174737, -1.1466361548852488, 1.279203826335021, -0.13256767288089324, -2.8188673866633884, -5.459144247765835e-10, 0.4]
-    state = [-1.2480710619904059, -0.9789437212492733, 1.5658405516053635, -0.5868968316491749, -2.8188673909386233, -3.9482173086469174e-09, 0.4]
-    gripper_val = 0.4 #0.9
-    state[6] = gripper_val
-    state += [gripper_val]
+    controller = NimbleController(env_urdf=[GROUND_URDF])
+    gripper_val = 0.7 #0.9
+    state = [-1.2480710619904059, -0.9789437212492733, 1.5658405516053635, -0.5868968316491749, -2.8188673909386233, -3.9482173086469174e-09, gripper_val, gripper_val]
     controller.check_config(state)
-    controller.close_gripper()
-    controller.open_gripper()
-    controller.run_for(50, reset=False, show=True)
-    # goal_pos = [0.6, 0.2, -0.4]
-    # controller.move_ee_to_xyz(goal_pos, loss_threshold=1e-2)
-    # goal_pos = [0.4, 0.6, -0.3]
-    # controller.move_ee_to_xyz(goal_pos, loss_threshold=1e-3)
+    controller.close_gripper(torque=-1e-4, show=True)
+    controller.action[1] = -1
+    controller.run_for(100, reset=False, show=True)
+    # controller.open_gripper(show=True)
     controller.block_while_serving()
 
 if __name__ == '__main__':
