@@ -8,7 +8,7 @@ ABS_PATH = os.path.dirname(os.path.abspath(__file__)) + os.sep
 ASSET_PATH = ABS_PATH + 'nimble' + os.sep
 
 UR5_URDF    = ASSET_PATH + 'ur5_gripper_no_col.urdf'
-UR5_URDF    = ASSET_PATH + 'ur5_gripper_no_col copy.urdf'
+# UR5_URDF    = ASSET_PATH + 'ur5_gripper_no_col copy.urdf'
 GROUND_URDF = ASSET_PATH + 'ground_obj.urdf'
 BOTTLE_URDF = ASSET_PATH + 'bottle.urdf'
 BOTTLE1 = ASSET_PATH + 'new_bottle/bottle_and_cap.urdf'
@@ -188,12 +188,21 @@ class NimbleController():
         
         self.show_states(show)
 
+    def time_step(self, state = None):
+        state = torch.tensor(self.world.getState()) if state is None else state
+        out = nimble.timestep(self.world, state, self.action)
+        out[self.dofs+1] = out[self.dofs]
+        self.arm.clampPositionsToLimits()
+        self.states.append(out)
+        return out
+    
+
 def main():
     controller = NimbleController(env_urdf=[GROUND_URDF])
     gripper_val = 0.7 #0.9
     state = [-1.2480710619904059, -0.9789437212492733, 1.5658405516053635, -0.5868968316491749, -2.8188673909386233, -3.9482173086469174e-09, gripper_val, gripper_val]
     controller.check_config(state)
-    controller.close_gripper(torque=-1e-4, show=True)
+    controller.close_gripper(torque=-1e-4, show=False)
     controller.action[1] = -1
     controller.run_for(100, reset=False, show=True)
     # controller.open_gripper(show=True)
