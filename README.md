@@ -43,6 +43,8 @@ Utilizing this ability to position the arm at desired locations, we programmed t
 3. Transport the bottle to a new position while maintaining its upright position
 4. Tip it over
 
+![](img/mujoco.gif)
+
 ## NimblePhysics
 
 To improve our motion planning algorithm, we moved on the differentiable simulator Nimblephysics.
@@ -54,5 +56,24 @@ The [NimbleController](NimbleController.py) requires pytorch and nimblephysics (
 ### Information 
 
 This change of simulator allowed for much more in depth motion planning and open the door to a lot of new possibilities. 
+
+Here is a list of all actions done :
+
+- Move the arm just above the cap
+
+![](img/prep_cap_twist.gif)
+
+- Uncap the bottle
+
+![](img/cap_twist.gif)
+
+- Grasp the bottle
+
+![](img/grasp_bottle.gif)
+
+- Move the bottle and pour its contents
+
+![](img/move_and_pour_bottle.gif)
+
 
 For much more detailed information see the [project report](final_report.pdf)
