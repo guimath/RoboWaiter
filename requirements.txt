@@ -1,3 +1,4 @@
 mujoco-py
 ikpy
 simple-pid
+numpy

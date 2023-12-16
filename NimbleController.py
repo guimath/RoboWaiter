@@ -2,7 +2,6 @@ import nimblephysics as nimble
 import torch
 import os
 import numpy as np
-import time
 
 ABS_PATH = os.path.dirname(os.path.abspath(__file__)) + os.sep
 ASSET_PATH = ABS_PATH + 'nimble' + os.sep
@@ -13,7 +12,7 @@ GROUND_URDF = ASSET_PATH + 'ground_obj.urdf'
 BOTTLE_URDF = ASSET_PATH + 'bottle.urdf'
 BOTTLE1 = ASSET_PATH + 'new_bottle/bottle_and_cap.urdf'
 BOX1 = ASSET_PATH + 'box1.urdf'
-TIMESTEP = 0.01
+TIME_STEP = 0.01
 SERVE_PORT = 8000
 EPOCH_MAX = 600
 LOSS_MIN = 1e-2
@@ -27,7 +26,7 @@ class NimbleController():
 
         self.world = nimble.simulation.World()
         self.world.setGravity([0, 0, 0]) # TODO change to real value 
-        self.world.setTimeStep(TIMESTEP)
+        self.world.setTimeStep(TIME_STEP)
         self.arm = self.world.loadSkeleton(arm_urdf)
         # self.arm.setSelfCollisionCheck(True) 
         # lik = arm.getJoint(9)
@@ -199,7 +198,7 @@ class NimbleController():
 
 def main():
     controller = NimbleController(env_urdf=[GROUND_URDF])
-    gripper_val = 0.7 #0.9
+    gripper_val = 0.7
     state = [-1.2480710619904059, -0.9789437212492733, 1.5658405516053635, -0.5868968316491749, -2.8188673909386233, -3.9482173086469174e-09, gripper_val, gripper_val]
     controller.check_config(state)
     controller.close_gripper(torque=-1e-4, show=False)
