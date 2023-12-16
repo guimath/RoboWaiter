@@ -1,34 +1,63 @@
-<?xml version="0.0" ?>
+<?xml version="1.0" ?>
 <robot name="bottle_and_cap.urdf">
+  <link name="world" />
   <link name="bottle">
+    <inertial>
+      <mass value="0.0001" />
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <inertia ixx="1.0" ixy="0" ixz="0" iyy="1.0" iyz="0" izz="1.0" />
+    </inertial>
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="bottle.obj" scale="0.01 0.01 0.01"/>
+        <mesh filename="bottle.obj" scale=".002 .002 .002"/>
       </geometry>
       <material name="bottle_color">
         <color rgba="0.85 0.85 0.85 1.0"/>
       </material>
     </visual>
+    <collision>
+      <geometry>
+        <mesh filename="bottle.obj" scale=".002 .002 .002"/>
+      </geometry>
+    </collision>
   </link>
 
   <link name="cap">
+    <inertial>
+      <mass value="0.0001" />
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <inertia ixx="1.0" ixy="0" ixz="0" iyy="1.0" iyz="0" izz="1.0" />
+    </inertial>
     <visual>
       <origin rpy="0 0 3.14" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="cap.obj" scale=".01 .01 .01"/>
+        <mesh filename="cap.obj" scale=".002 .002 .002"/>
       </geometry>
       <material name="grey">
         <color rgba="0.85 0.85 0.85 1.0"/>
       </material>
     </visual>
+    <collision>
+      <geometry>
+        <mesh filename="cap.obj" scale=".002 .002 .002"/>
+      </geometry>
+    </collision>
   </link>
 
-  <joint name="cap_joint" type="revolute">
+  <joint name="cap_joint" type="fixed">
     <parent link="bottle"/>
     <child link="cap"/>
-    <origin xyz="0 .6 0" rpy="0 0 0"/>
+    <origin xyz="0 .12 0" rpy="0 0 0"/>
     <axis xyz="0 0 1"/>
     <limit lower="0" upper="6.28319" effort="100" velocity="0.5"/>
   </joint>
+
+  <joint name="bot" type="floating">
+      <origin xyz="-0.5 0.1 0.035" rpy="0 0 0" />
+      <!-- -0.50 0.1 0.035 -->
+      <parent link="world" />
+      <child link="bottle" />
+  </joint>
+
 </robot>
