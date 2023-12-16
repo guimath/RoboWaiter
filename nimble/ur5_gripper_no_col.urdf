@@ -18,11 +18,6 @@
         <color rgba="0.7 0.7 0.7 1.0"/>
       </material>
     </visual>
-    <collision>
-      <geometry>
-        <mesh filename="meshes/ur5/visual/base.stl"/>
-      </geometry>
-    </collision>
     <inertial>
       <mass value="4.0"/>
       <origin rpy="0 0 0" xyz="0.0 0.0 0.0"/>
@@ -48,11 +43,6 @@
         <color rgba="0.7 0.7 0.7 1.0"/>
       </material>
     </visual>
-    <collision>
-      <geometry>
-        <mesh filename="meshes/ur5/visual/shoulder.stl"/>
-      </geometry>
-    </collision>
     <inertial>
       <mass value="3.7"/>
       <origin rpy="0 0 0" xyz="0.0 0.0 0.0"/>
@@ -79,11 +69,6 @@
         <color rgba="0.7 0.7 0.7 1.0"/>
       </material>
     </visual>
-    <collision>
-      <geometry>
-        <mesh filename="meshes/ur5/visual/upperarm.stl"/>
-      </geometry>
-    </collision>
     <inertial>
       <mass value="8.393"/>
       <origin rpy="0 0 0" xyz="0.0 0.0 0.28"/>
@@ -109,11 +94,6 @@
         <color rgba="0.7 0.7 0.7 1.0"/>
       </material>
     </visual>
-    <collision>
-      <geometry>
-        <mesh filename="meshes/ur5/visual/forearm.stl"/>
-      </geometry>
-    </collision>
     <inertial>
       <mass value="2.275"/>
       <origin rpy="0 0 0" xyz="0.0 0.0 0.25"/>
@@ -139,11 +119,6 @@
         <color rgba="0.7 0.7 0.7 1.0"/>
       </material>
     </visual>
-    <collision>
-      <geometry>
-        <mesh filename="meshes/ur5/visual/wrist1.stl"/>
-      </geometry>
-    </collision>
     <inertial>
       <mass value="1.219"/>
       <origin rpy="0 0 0" xyz="0.0 0.0 0.0"/>
@@ -169,11 +144,6 @@
         <color rgba="0.7 0.7 0.7 1.0"/>
       </material>
     </visual>
-    <collision>
-      <geometry>
-        <mesh filename="meshes/ur5/visual/wrist2.stl"/>
-      </geometry>
-    </collision>
     <inertial>
       <mass value="1.219"/>
       <origin rpy="0 0 0" xyz="0.0 0.0 0.0"/>
@@ -199,11 +169,6 @@
         <color rgba="0.7 0.7 0.7 1.0"/>
       </material>
     </visual>
-    <collision>
-      <geometry>
-        <mesh filename="meshes/ur5/visual/wrist3.stl"/>
-      </geometry>
-    </collision>
     <inertial>
       <mass value="0.1879"/>
       <origin rpy="0 0 0" xyz="0.0 0.0 0.0"/>
@@ -218,12 +183,6 @@
   </joint>
 
   <link name="ee_link">
-    <collision>
-      <geometry>
-        <box size="0.01 0.01 0.01"/>
-      </geometry>
-      <origin rpy="0 0 0" xyz="-0.01 0 0"/>
-    </collision>
     <visual>
       <geometry>
         <box size="0.01 0.01 0.01"/>
@@ -249,11 +208,6 @@
         <color rgba="0.7 0.7 0.7 1.0"/>
       </material>
     </visual>
-    <collision>
-      <geometry>
-        <mesh filename="meshes/ur5/visual/robotiq_85_base_link_coarse.stl"/>
-      </geometry>
-    </collision>
     <inertial>
       <mass value="0.30915"/>
       <origin xyz="0.00021987 -2.3546e-10 0.030163" rpy="2.04599906e-02 -6.72138114e-07  1.57082885e+00"/>
@@ -261,14 +215,45 @@
     </inertial>
   </link>
 
+
+  <!-- <joint name="abstract" type="revolute">
+    <parent link="robotiq_base_link"/>
+    <child link="abstract_link"/>
+    <origin xyz="-0.0127 0 0.0693075" rpy="0.0 0.0 3.14159265"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-1" upper="0.8" effort="20" velocity="3.2"/>
+  </joint>
+
+  <link name="abstract_link">
+    <visual>
+      <geometry>
+        <box size="0.0 0.0 0.0" />
+      </geometry>
+      <material name="LightGrey">
+        <color rgba="0.7 0.7 0.7 1.0"/>
+      </material>
+    </visual>
+    <inertial>
+      <mass value="0.0"/>
+      <origin xyz="0.00602756 0 0.00669926" rpy="0.30191756 0.0 1.57079633"/>
+      <inertia ixx="1.70064e-06" ixy="0.0" ixz="0.0" iyy="1.58577e-06" iyz="0.0" izz="3.69621e-07"/>
+    </inertial>
+    <collision>
+      <geometry>
+        <box size="0.0 0.0 0.0" />
+      </geometry>
+    </collision>
+  </link> -->
+  
   <joint name="base_to_lik" type="revolute">
     <parent link="robotiq_base_link"/>
     <child link="left_inner_knuckle"/>
     <origin xyz="0.0127 0 0.0693075" rpy="0 0 0"/>
     <axis xyz="0 1 0"/>
-    <limit lower="-1" upper="1" effort="20" velocity="3.2"/>
-    <dynamics damping="0.01" friction="0.004"/>
-    <!-- <mimic joint="base_to_rik" multiplier="-1" offset="0"/> -->
+    <limit lower="-0.3" upper="0.8" effort="20" velocity="3.2"/>
+    <!-- <dynamics damping="0.1" friction="0.0"/> -->
+    <!-- <mimic joint="base_to_rik"/> -->
+    <!-- <mimic joint="abstract"/> -->
   </joint>
 
 
@@ -293,11 +278,6 @@
       <origin xyz="0.0170975 -3.93809e-10 0.0224918" rpy="0.0 -0.64997493  0.0"/>
       <inertia ixx="5.59353e-06" ixy="0.0" ixz="0.0" iyy="3.96549e-06" iyz="0.0" izz="1.88108e-06"/>
     </inertial>
-    <collision>
-      <geometry>
-        <mesh filename="meshes/ur5/visual/inner_knuckle_coarse.stl"/>
-      </geometry>
-    </collision>
   </link>
 
   <joint name="base_to_rik" type="revolute">
@@ -305,8 +285,8 @@
     <child link="right_inner_knuckle"/>
     <origin xyz="-0.0127 0 0.0693075" rpy="0.0 0.0 3.14159265"/>
     <axis xyz="0 1 0"/>
-    <limit lower="-1" upper="1" effort="20" velocity="3.2"/>
-    <dynamics damping="0.01" friction="0.004"/>
+    <limit lower="-0.3" upper="0.8" effort="20" velocity="3.2"/>
+    <!-- <dynamics damping="0.1" friction="0.0"/> -->
   </joint>
   
   <!-- <equality>
@@ -322,6 +302,7 @@
       <lateral_friction value="1.0"/>
     </contact> -->
     <visual>
+
       <geometry>
         <mesh filename="meshes/ur5/visual/inner_knuckle_coarse.stl"/>
       </geometry>
@@ -335,11 +316,6 @@
       <origin xyz="0.0168606 3.93808e-10 0.02267" rpy="0.0 -0.64997493  0.0"/>
       <inertia ixx="5.59353e-06" ixy="0.0" ixz="0.0" iyy="3.96549e-06" iyz="0.0" izz="1.88108e-06"/>
     </inertial>
-    <collision>
-      <geometry>
-        <mesh filename="meshes/ur5/visual/inner_knuckle_coarse.stl"/>
-      </geometry>
-    </collision>
   </link>
 
   <joint name="lik_to_lif" type="fixed">
@@ -350,8 +326,9 @@
 
   <link name="left_inner_finger">
     <visual>
+      <origin xyz="0 0 0.025" rpy="0 0 0" />
       <geometry>
-        <mesh filename="meshes/ur5/visual/inner_finger_coarse.stl"/>
+        <mesh filename="box.obj" scale="0.005 0.01 0.02" />
       </geometry>
       <material name="LightGrey">
         <color rgba="0.7 0.7 0.7 1.0"/>
@@ -363,8 +340,9 @@
       <inertia ixx="1.70064e-06" ixy="0.0" ixz="0.0" iyy="1.58577e-06" iyz="0.0" izz="3.69621e-07"/>
     </inertial>
     <collision>
+      <origin xyz="0 0 0.025" rpy="0 0 0" />
       <geometry>
-        <mesh filename="meshes/ur5/visual/inner_finger_coarse.stl"/>
+        <mesh filename="box.obj" scale="0.005 0.01 0.02" />
       </geometry>
     </collision>
   </link>
@@ -379,8 +357,9 @@
 
   <link name="right_inner_finger">
     <visual>
+      <origin xyz="0 0 0.025" rpy="0 0 0" />
       <geometry>
-        <mesh filename="meshes/ur5/visual/inner_finger_coarse.stl"/>
+        <mesh filename="box.obj" scale="0.005 0.01 0.02" />
       </geometry>
       <material name="LightGrey">
         <color rgba="0.7 0.7 0.7 1.0"/>
@@ -392,8 +371,9 @@
       <inertia ixx="1.70064e-06" ixy="0.0" ixz="0.0" iyy="1.58577e-06" iyz="0.0" izz="3.69621e-07"/>
     </inertial>
     <collision>
+      <origin xyz="0 0 0.025" rpy="0 0 0" />
       <geometry>
-        <mesh filename="meshes/ur5/visual/inner_finger_coarse.stl"/>
+        <mesh filename="box.obj" scale="0.005 0.01 0.02" />
       </geometry>
     </collision>
   </link>
